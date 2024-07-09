@@ -3,7 +3,7 @@ const express = require("express");
 /*
 const joueur = require("../models/exmple.schema");
 
-exports.addJoueur = async (req, res) => {
+exports.addJoueur = async (req, res,next) => {
     try {
         const newJoueur = await joueur.create({
             pseudo: req.body.pseudo,
@@ -12,7 +12,7 @@ exports.addJoueur = async (req, res) => {
         });
         res.status(200).send("joueur ajouté : " + newJoueur.pseudo);
     } catch (err) {
-        res.status(500).send(err);
+    next(new AppError(err.message, 400));
     }
 }
  */
