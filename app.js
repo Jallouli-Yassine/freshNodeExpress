@@ -6,80 +6,56 @@ const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const morgan = require("morgan");
 const hpp = require('hpp');
-const bodyParser = require("body-parser");
 const path = require("path");
-const controller = require("./controller/Controller");
 const AppError = require('./middleware/errorHandler');
 const globalErrorHandler = require('./controller/errorController');
 const rootIndex = require("./routes/index");
-                    /* to run the project write: npm run dev */
 
 const app = express();
 
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "twig");
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
 
-//security http headers
+// Security HTTP headers
 app.use(helmet());
 
-//limit request from same api
-// Create a limiter middleware
+// Limit requests from the same API
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // limit each IP to 100 requests per windowMs
     message: 'Too many requests from this IP, please try again later.',
 });
 app.use('/api', limiter);
-// body parser, reading sata from body into req.body
-//app.use(express.json());
+
+// Parse incoming JSON requests (up to 100kb)
 app.use(express.json({ limit: '100kb' }));
 
-//data sanitization against NoSql query injection
+// Data sanitization against NoSQL query injection
 app.use(mongoSanitize());
 
-//data sanitization XXS
+// Data sanitization against XSS
 app.use(xss());
 
-// Apply hpp middleware to protect against HTTP Parameter Pollution
+// Prevent HTTP Parameter Pollution
 app.use(hpp());
 
-//{{URL}}api/v1/tours?sort=price&sort=duration
-/*
-app.use(
-  hpp({
-    whitelist: ['duration'],
-  })
-);
-*/
-
-//yatik time mta req
+// Logger for development environment
 app.use(morgan('dev'));
 
+// Example route
 app.get('/', (req, res) => {
     res.json({ message: "Hello World!" });
 });
 
+// API routes
 app.use("/api", rootIndex);
 
-const server = http.createServer(app);
-
-// Socket.IO setup
-const io = require("socket.io")(server);
-io.on('connection', (socket) => {
-    console.log('A user connected');
-
-    // Handle incoming messages
-
-    // Handle disconnection
-    socket.on('disconnect', () => {
-        console.log('User disconnected');
-    });
-});
+// Handle undefined routes
 app.all('*', (req, res, next) => {
-    next(new AppError(`can't find ${req.originalUrl} on this server!`, 404));
+    next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
+
+// Global error handling middleware
 app.use(globalErrorHandler);
 
 module.exports = app;

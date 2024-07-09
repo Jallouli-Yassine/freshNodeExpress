@@ -1,28 +1,38 @@
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
-process.on('uncaughtException', (err) => {
-    console.log(err.name, err.message);
-});
-
-dotenv.config({ path: './config.env' });
-
 const app = require('./app');
 
+// Load environment variables from config.env
+dotenv.config({ path: './config.env' });
+
+// MongoDB connection
 const DB = process.env.DATABASE;
-mongoose
-    .connect(DB)
-    .then((con) => console.log('🟢 DB connection successful! 🟢'))
-    .catch((err) =>console.error('🔴 Database connection error 🔴:', err));
-const port = process.env.PORT;
-const server = app.listen(port, () => {
-    console.log(`App running on port ${port}...`);
-});
+mongoose.connect(DB)
+    .then(() => {
+        console.log('🟢 DB connection successful! 🟢');
 
-// handle unhandledRejection kima mochkla fl db
-// crashing is optional
-process.on('unhandledRejection', (err) => {
-    console.log(err.name, err.message);
-});
+        // Start the Express server
+        const port = process.env.PORT || 3000;
+        const server = app.listen(port, () => {
+            console.log(`App running on port ${port}...`);
+        });
 
-// handle uncaughtException kima theb taffichi haja mch maojouda aaslan
-// crashing is bessif aliik :) !!!
+        // Handle unhandledRejection (e.g., unexpected promises)
+        process.on('unhandledRejection', (err) => {
+            console.error('Unhandled Rejection:', err);
+            // Optionally: Graceful shutdown if necessary
+            server.close(() => process.exit(1)); // Close server and exit process
+        });
+
+        // Handle uncaughtException (e.g., unexpected errors)
+        process.on('uncaughtException', (err) => {
+            console.error('Uncaught Exception:', err);
+            // Optionally: Graceful shutdown if necessary
+            server.close(() => process.exit(1)); // Close server and exit process
+        });
+
+    })
+    .catch((err) => {
+        console.error('🔴 Database connection error 🔴:', err);
+        process.exit(1); // Exit process on DB connection error
+    });
